@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fashion Inventory Scanner & CSV Exporter</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom mobile polish and touch optimizations */
+    body {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-animation {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-900 text-slate-100 antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-30 bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 px-4 py-3 shadow-lg">
+    <div class="max-w-3xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-barcode"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-white tracking-tight leading-none flex items-center gap-1.5">
+            Fashion Scan
+            <span class="text-[10px] bg-brand-500/20 text-brand-400 border border-brand-500/30 px-1.5 py-0.5 rounded font-mono uppercase font-semibold">Sheets</span>
+          </h1>
+          <p class="text-xs text-slate-400 mt-0.5">Inventario Abbigliamento Mobile</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-2">
+        <button id="btnGuide" class="px-2.5 py-1.5 rounded-lg bg-slate-700/70 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5 border border-slate-600/50">
+          <i class="fa-solid fa-circle-question text-emerald-400"></i>
+          <span class="hidden sm:inline">Guida</span>
+        </button>
+        <button id="btnSettings" class="px-2.5 py-1.5 rounded-lg bg-slate-700/70 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5 border border-slate-600/50">
+          <i class="fa-solid fa-key text-amber-400"></i>
+          <span class="hidden sm:inline">API Key</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Scrollable Content -->
+  <main class="flex-1 overflow-y-auto custom-scrollbar p-4 pb-24 max-w-3xl w-full mx-auto space-y-5">
+
+    <!-- API Key Alert Warning if missing -->
+    <div id="apiKeyBanner" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-200 text-xs shadow-lg">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400 text-base shrink-0">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-amber-300 text-sm">Chiave API Gemini Non Configurata</p>
+          <p class="text-slate-300 mt-0.5">Inserisci la tua API Key gratuita di Gemini per attivare lo scanner con intelligenza artificiale visiva.</p>
+        </div>
+      </div>
+      <button onclick="openSettingsModal()" class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition shadow-md whitespace-nowrap">
+        <i class="fa-solid fa-key mr-1"></i> Configura
+      </button>
+    </div>
+
+    <!-- Quick Stats Summary Cards -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+        <div>
+          <span class="text-xs text-slate-400 uppercase font-semibold tracking-wider block">Capi Unici</span>
+          <span id="statUniqueCount" class="text-2xl font-bold text-white mt-0.5 block">0</span>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg border border-indigo-500/20">
+          <i class="fa-solid fa-shirt"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+        <div>
+          <span class="text-xs text-slate-400 uppercase font-semibold tracking-wider block">Pezzi Totali</span>
+          <span id="statTotalQuantity" class="text-2xl font-bold text-brand-400 mt-0.5 block">0</span>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center text-lg border border-brand-500/20">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scanner Action Panel -->
+    <div class="bg-slate-800/80 border border-slate-700 rounded-3xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+      <div class="text-center mb-4">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 text-xs font-semibold uppercase tracking-wider mb-2">
+          <i class="fa-solid fa-camera"></i> Fotocamera Etichetta
+        </span>
+        <h2 class="text-lg font-bold text-white">Acquisisci Etichetta Capo</h2>
+        <p class="text-xs text-slate-400 mt-1">Fotografa l'etichetta del capo per estrarre codice, taglia e prezzo in automatico</p>
+      </div>
+
+      <!-- File Inputs (Hidden) -->
+      <!-- Environment Camera capture for smartphones -->
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
+      <!-- Gallery Upload fallback -->
+      <input type="file" id="galleryInput" accept="image/*" class="hidden" />
+
+      <!-- Scan Buttons Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- Main Camera Button -->
+        <button id="btnCamera" class="sm:col-span-2 group relative py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-600 via-emerald-600 to-teal-600 hover:from-brand-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-brand-600/30 flex items-center justify-center gap-3 transition active:scale-95 border border-emerald-400/30">
+          <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition">
+            <i class="fa-solid fa-camera-retro text-white text-base"></i>
+          </div>
+          <span class="text-base tracking-wide">Scatta Foto Etichetta</span>
+        </button>
+
+        <!-- Gallery Option -->
+        <button id="btnGallery" class="py-3 px-3 rounded-2xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs border border-slate-600/80 flex items-center justify-center gap-2 transition active:scale-95">
+          <i class="fa-solid fa-images text-indigo-400 text-sm"></i>
+          <span>Da Galleria</span>
+        </button>
+      </div>
+
+      <!-- Manual Input Option Divider -->
+      <div class="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs">
+        <span class="text-slate-400">Non hai la foto dell'etichetta?</span>
+        <button id="btnManualEntry" class="text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1 hover:underline">
+          <i class="fa-solid fa-keyboard"></i> Inserisci Manualmente
+        </button>
+      </div>
+
+      <!-- Loading State Overlay -->
+      <div id="aiLoadingOverlay" class="hidden absolute inset-0 bg-slate-900/90 backdrop-blur-md z-20 flex flex-col items-center justify-center p-6 text-center">
+        <div class="relative mb-4">
+          <div class="w-16 h-16 rounded-full border-4 border-brand-500/20 border-t-brand-500 animate-spin"></div>
+          <div class="absolute inset-0 flex items-center justify-center text-brand-400 text-xl">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+        </div>
+        <h3 class="text-base font-bold text-white mb-1">Analisi Etichetta in Corso...</h3>
+        <p id="aiLoadingStatus" class="text-xs text-slate-400 max-w-xs">Gemini AI sta leggendo il codice a barre, la taglia e i prezzi dell'abito.</p>
+      </div>
+    </div>
+
+    <!-- Inventory Section Header & Search -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-boxes-stacked text-brand-400"></i>
+          Inventario Locale
+        </h2>
+        <span id="badgeItemCount" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono font-medium">
+          0 Voci
+        </span>
+      </div>
+
+      <!-- Search & Export Toolbar -->
+      <div class="flex flex-col sm:flex-row gap-2">
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="searchInput" placeholder="Cerca per Nome, SKU o Barcode..." class="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition" />
+          <button id="btnClearSearch" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Export CSV Button (Highlighted) -->
+        <button id="btnExportCSV" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-900/30 transition flex items-center justify-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-file-csv text-sm"></i>
+          <span>Esporta CSV Google Sheets</span>
+        </button>
+
+        <!-- Svuota Inventario Button -->
+        <button id="btnClearAll" class="px-3 py-2 bg-slate-800 hover:bg-red-950/40 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-800/60 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5" title="Svuota tutto l'inventario">
+          <i class="fa-solid fa-trash-can"></i>
+          <span class="sm:hidden">Svuota</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Inventory Cards Container -->
+    <div id="inventoryList" class="space-y-3">
+      <!-- Empty State -->
+      <div id="emptyState" class="bg-slate-800/40 border border-dashed border-slate-700/80 rounded-2xl p-8 text-center space-y-3">
+        <div class="w-12 h-12 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center mx-auto text-xl border border-slate-700">
+          <i class="fa-solid fa-box-open"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-slate-300">Nessun capo nell'inventario</p>
+          <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Scatta una foto ad un'etichetta o aggiungi un articolo manualmente per iniziare.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Floating Bottom CSV Quick Bar (Visible when items exist) -->
+  <div id="mobileQuickBar" class="fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-lg border-t border-slate-700/80 px-4 py-3 z-20 shadow-2xl transition-transform transform translate-y-full">
+    <div class="max-w-3xl mx-auto flex items-center justify-between gap-3">
+      <div class="text-xs">
+        <p class="font-bold text-white flex items-center gap-1">
+          <i class="fa-solid fa-cart-flatbed text-brand-400"></i>
+          <span id="quickBarTotals">0 articoli</span>
+        </p>
+        <p class="text-[11px] text-slate-400">Pronti per l'esportazione</p>
+      </div>
+      <button onclick="exportCSV()" class="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-brand-600 hover:from-emerald-500 hover:to-brand-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center gap-2">
+        <i class="fa-solid fa-file-export"></i>
+        <span>Scarica File CSV</span>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- 1. VERIFICATION & EDIT MODAL (Shown after AI scan or manual entry trigger) -->
+  <div id="modalVerify" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-800/90 border-b border-slate-700/80 px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-2">
+          <div class="p-1.5 rounded-lg bg-brand-500/20 text-brand-400 text-sm">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <h3 id="modalVerifyTitle" class="text-sm font-bold text-white">Verifica Dati Letto</h3>
+        </div>
+        <button onclick="closeVerifyModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700/60 text-sm transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Form) -->
+      <div class="p-5 overflow-y-auto custom-scrollbar space-y-4 text-xs">
+        
+        <!-- Image Preview Thumbnail (if present) -->
+        <div id="verifyImgPreviewContainer" class="hidden bg-slate-900 rounded-2xl p-2 border border-slate-700/60 flex items-center gap-3">
+          <img id="verifyImgPreview" src="" alt="Anteprima Etichetta" class="w-16 h-16 object-cover rounded-xl border border-slate-700" />
+          <div>
+            <p class="text-xs font-semibold text-slate-200">Foto Etichetta Rilevata</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">I dati estratti sono stati precompilati in basso. Controlla e modifica se necessario.</p>
+          </div>
+        </div>
+
+        <!-- Form Inputs Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          
+          <!-- Barcode -->
+          <div class="space-y-1">
+            <label class="block font-semibold text-slate-300">Codice a Barre (Barcode)</label>
+            <div class="relative">
+              <i class="fa-solid fa-barcode absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" id="inputBarcode" placeholder="es. 8012345678901" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition font-mono" />
+            </div>
+          </div>
+
+          <!-- Codice Prodotto / SKU -->
+          <div class="space-y-1">
+            <label class="block font-semibold text-slate-300">Codice Prodotto / SKU <span class="text-red-400">*</span></label>
+            <div class="relative">
+              <i class="fa-solid fa-hashtag absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" id="inputProductCode" placeholder="es. ART-9921" required class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition font-mono font-semibold" />
+            </div>
+          </div>
+
+          <!-- Product Name / Description -->
+          <div class="sm:col-span-2 space-y-1">
+            <label class="block font-semibold text-slate-300">Nome / Descrizione Capo <span class="text-red-400">*</span></label>
+            <div class="relative">
+              <i class="fa-solid fa-shirt absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" id="inputProductName" placeholder="es. Abito Seta Floreale" required class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition" />
+            </div>
+          </div>
+
+          <!-- Taglia / Size -->
+          <div class="space-y-1">
+            <label class="block font-semibold text-slate-300">Taglia <span class="text-red-400">*</span></label>
+            <div class="relative">
+              <i class="fa-solid fa-ruler-vertical absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" id="inputSize" placeholder="es. S, M, L, 42, 44..." required class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition uppercase font-semibold" />
+            </div>
+          </div>
+
+          <!-- Quantità -->
+          <div class="space-y-1">
+            <label class="block font-semibold text-slate-300">Quantità</label>
+            <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded-xl p-1">
+              <button type="button" onclick="adjustFormQty(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm transition">
+                <i class="fa-solid fa-minus"></i>
+              </button>
+              <input type="number" id="inputQuantity" value="1" min="1" class="w-full bg-transparent text-center text-white font-bold text-sm focus:outline-none" />
+              <button type="button" onclick="adjustFormQty(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm transition">
+                <i class="fa-solid fa-plus"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Prezzo Originale -->
+          <div class="space-y-1">
+            <label class="block font-semibold text-slate-300">Prezzo Originale (€)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">€</span>
+              <input type="number" step="0.01" id="inputPriceOriginal" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition font-mono" />
+            </div>
+          </div>
+
+          <!-- Prezzo 2.8 (Auto Calculated) -->
+          <div class="space-y-1">
+            <label class="block font-semibold text-brand-400 flex items-center justify-between">
+              <span>Prezzo 2.8 (€)</span>
+              <span class="text-[10px] text-slate-400 font-normal">(x 2.8 auto)</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-brand-400 font-bold">€</span>
+              <input type="number" step="0.01" id="inputPriceCalc" placeholder="0.00" class="w-full bg-slate-900 border border-brand-500/50 rounded-xl pl-8 pr-3 py-2 text-brand-300 font-bold placeholder-slate-500 focus:outline-none focus:border-brand-500 transition font-mono" />
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div class="bg-slate-800/90 border-t border-slate-700/80 px-5 py-3.5 flex items-center justify-end space-x-2 shrink-0">
+        <button type="button" onclick="closeVerifyModal()" class="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold transition">
+          Annulla
+        </button>
+        <button type="button" id="btnSaveVerifiedItem" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold transition shadow-lg shadow-brand-600/30 flex items-center gap-2">
+          <i class="fa-solid fa-check"></i>
+          <span>Salva nell'Inventario</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. GEMINI API KEY SETTINGS MODAL -->
+  <div id="modalSettings" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-key text-amber-400"></i>
+          Impostazioni API Gemini
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Inserisci la tua API Key di Google AI Studio. Verrà salvata in modo sicuro esclusivamente nel tuo browser (<code class="text-brand-400">localStorage</code>) e non verrà mai inviata a server esterni.
+      </p>
+
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold text-slate-300">Gemini API Key</label>
+        <div class="relative">
+          <input type="password" id="inputApiKey" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 font-mono" />
+          <button type="button" id="btnToggleApiKeyVisibility" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-1">
+          Non hai ancora una chiave? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="text-brand-400 underline hover:text-brand-300">Ottieni la chiave gratuita qui</a>.
+        </p>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end space-x-2 border-t border-slate-700/80">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-600 transition">
+          Annulla
+        </button>
+        <button onclick="saveSettingsModal()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">
+          Salva Chiave
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. MOBILE & GOOGLE SHEETS GUIDE MODAL -->
+  <div id="modalGuide" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-auto flex flex-col max-h-[90vh]">
+      
+      <div class="bg-slate-800 border-b border-slate-700/80 px-5 py-3.5 flex items-center justify-between shrink-0">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i>
+          Guida Telefono & Google Sheets
+        </h3>
+        <button onclick="closeGuideModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto custom-scrollbar space-y-5 text-xs text-slate-300 leading-relaxed">
+        
+        <!-- Section 1: Smartphone Home Screen -->
+        <div class="space-y-2 bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4">
+          <h4 class="text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-[10px]">1</span>
+            Usa l'App come App Nativa sul Telefono
+          </h4>
+          <p class="text-slate-300">Puoi aggiungere questa pagina alla schermata Home del tuo cellulare per aprirla a tutto schermo come un'app:</p>
+          <ul class="list-disc pl-5 space-y-1 text-slate-400">
+            <li><strong class="text-slate-200">iOS (Safari iPhone):</strong> Tocca il tasto <i class="fa-solid fa-share-from-square text-blue-400"></i> <em>Condividi</em> &rarr; Scorri e seleziona <strong class="text-slate-200">Aggiungi alla schermata Home</strong>.</li>
+            <li><strong class="text-slate-200">Android (Chrome):</strong> Tocca i <i class="fa-solid fa-ellipsis-vertical text-slate-200"></i> <em>tre pallini</em> in alto a destra &rarr; Seleziona <strong class="text-slate-200">Aggiungi a schermata Home</strong> o <strong class="text-slate-200">Installa app</strong>.</li>
+          </ul>
+        </div>
+
+        <!-- Section 2: CSV Export & Google Sheets Import -->
+        <div class="space-y-2 bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4">
+          <h4 class="text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">2</span>
+            Importa il file CSV su Google Sheets
+          </h4>
+          <ol class="list-decimal pl-5 space-y-1.5 text-slate-300">
+            <li>Premi il pulsante green <strong class="text-emerald-400">"Esporta CSV Google Sheets"</strong> nell'app per scaricare il file.</li>
+            <li>Apri il tuo foglio di lavoro su **Google Sheets** (da PC o dal browser del telefono).</li>
+            <li>Vai nel menu in alto: <strong class="text-slate-100">File &rarr; Importa</strong>.</li>
+            <li>Seleziona la scheda <strong class="text-slate-100">Carica</strong> e trascina o scegli il file CSV appena scaricato.</li>
+            <li>Nella finestra d'importazione imposta:
+              <ul class="list-disc pl-4 mt-1 text-slate-400 space-y-0.5">
+                <li><em>Tipo di separatore:</em> <strong>Rileva automaticamente</strong> oppure <strong>Personalizzato (punto e coma ;)</strong></li>
+                <li><em>Converti testo in numeri e date:</em> <strong>Sì</strong></li>
+              </ul>
+            </li>
+            <li>Clicca su <strong class="text-emerald-400">Importa dati</strong> per visualizzare la tabella aggiornata!</li>
+          </ol>
+        </div>
+
+        <!-- Formatting Note -->
+        <div class="p-3 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-slate-400 flex items-start gap-2">
+          <i class="fa-solid fa-circle-info text-brand-400 mt-0.5 shrink-0"></i>
+          <span>Il file esportato include l'intestazione UTF-8 BOM, garantendo che lettere accentate e colonne siano perfettamente lette sia su Google Sheets che su Microsoft Excel.</span>
+        </div>
+
+      </div>
+
+      <div class="bg-slate-800 border-t border-slate-700/80 px-5 py-3 flex items-center justify-end shrink-0">
+        <button onclick="closeGuideModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-xs transition">
+          Ho Capito
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 4. DELETE SINGLE ITEM CONFIRM MODAL -->
+  <div id="modalDelete" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-sm shadow-2xl p-5 text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center mx-auto text-xl border border-red-500/20">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-white">Eliminare questo articolo?</h3>
+        <p id="deleteItemName" class="text-xs text-slate-300 font-semibold mt-1">--</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">L'operazione non può essere annullata.</p>
+      </div>
+      <div class="flex items-center justify-center gap-2 pt-2">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-600 transition">
+          Annulla
+        </button>
+        <button id="btnConfirmDelete" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition shadow-md">
+          Sì, Elimina
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CLEAR ALL INVENTORY CONFIRM MODAL -->
+  <div id="modalClearAll" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-sm shadow-2xl p-5 text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center mx-auto text-xl border border-red-500/20">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-white">Svuotare l'intero inventario?</h3>
+        <p class="text-xs text-slate-300 mt-1">Tutti i capi e le quantità salvate in locale verranno eliminate definitivamente.</p>
+      </div>
+      <div class="flex items-center justify-center gap-2 pt-2">
+        <button onclick="closeClearAllModal()" class="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-600 transition">
+          Annulla
+        </button>
+        <button onclick="confirmClearAll()" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition shadow-md">
+          Svuota Inventario
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none flex flex-col space-y-2"></div>
+
+  <script>
+    const STORAGE_KEY_INVENTORY = 'fashion_inventory_items_v2';
+    const STORAGE_KEY_API_KEY = 'fashion_gemini_api_key';
+
+    let inventory = [];
+    let pendingItem = null;
+    let deleteTargetId = null;
+    let currentSearchQuery = '';
+
+    // Initialize application on load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadInventory();
+      checkApiKeyBanner();
+      setupEventListeners();
+      renderInventory();
+    });
+
+    function getApiKey() {
+      return localStorage.getItem(STORAGE_KEY_API_KEY) || '';
+    }
+
+    function setApiKey(key) {
+      localStorage.setItem(STORAGE_KEY_API_KEY, key.trim());
+      checkApiKeyBanner();
+    }
+
+    function checkApiKeyBanner() {
+      const banner = document.getElementById('apiKeyBanner');
+      if (!getApiKey()) {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function loadInventory() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY_INVENTORY);
+        inventory = data ? JSON.parse(data) : [];
+      } catch (e) {
+        console.error("Errore caricamento inventario:", e);
+        inventory = [];
+      }
+    }
+
+    function saveInventory() {
+      try {
+        localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(inventory));
+      } catch (e) {
+        console.error("Errore salvataggio inventario:", e);
+      }
+      renderInventory();
+    }
+
+    function setupEventListeners() {
+      // Header buttons
+      document.getElementById('btnSettings').addEventListener('click', openSettingsModal);
+      document.getElementById('btnGuide').addEventListener('click', openGuideModal);
+
+      // Camera & File upload buttons
+      const cameraInput = document.getElementById('cameraInput');
+      const galleryInput = document.getElementById('galleryInput');
+
+      document.getElementById('btnCamera').addEventListener('click', () => {
+        if (!getApiKey()) {
+          showToast('Inserisci prima la tua API Key Gemini per usare lo scanner AI.', 'warning');
+          openSettingsModal();
+          return;
+        }
+        cameraInput.click();
+      });
+
+      document.getElementById('btnGallery').addEventListener('click', () => {
+        if (!getApiKey()) {
+          showToast('Inserisci prima la tua API Key Gemini per usare lo scanner AI.', 'warning');
+          openSettingsModal();
+          return;
+        }
+        galleryInput.click();
+      });
+
+      cameraInput.addEventListener('change', handleFileSelected);
+      galleryInput.addEventListener('change', handleFileSelected);
+
+      document.getElementById('btnManualEntry').addEventListener('click', () => {
+        openVerifyModalForManual();
+      });
+
+      // Verification modal form bindings
+      document.getElementById('inputPriceOriginal').addEventListener('input', (e) => {
+        const orig = parseFloat(e.target.value);
+        if (!isNaN(orig) && orig >= 0) {
+          const calc = (orig * 2.8).toFixed(2);
+          document.getElementById('inputPriceCalc').value = calc;
+        }
+      });
+
+      document.getElementById('btnSaveVerifiedItem').addEventListener('click', confirmSaveItem);
+
+      // Search bindings
+      const searchInput = document.getElementById('searchInput');
+      const btnClearSearch = document.getElementById('btnClearSearch');
+
+      searchInput.addEventListener('input', (e) => {
+        currentSearchQuery = e.target.value.trim().toLowerCase();
+        if (currentSearchQuery) {
+          btnClearSearch.classList.remove('hidden');
+        } else {
+          btnClearSearch.classList.add('hidden');
+        }
+        renderInventory();
+      });
+
+      btnClearSearch.addEventListener('click', () => {
+        searchInput.value = '';
+        currentSearchQuery = '';
+        btnClearSearch.classList.add('hidden');
+        renderInventory();
+      });
+
+      // Toolbar Buttons
+      document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+      document.getElementById('btnClearAll').addEventListener('click', openClearAllModal);
+
+      // API Key visibility toggle
+      document.getElementById('btnToggleApiKeyVisibility').addEventListener('click', () => {
+        const input = document.getElementById('inputApiKey');
+        const icon = document.querySelector('#btnToggleApiKeyVisibility i');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.className = 'fa-solid fa-eye-slash';
+        } else {
+          input.type = 'password';
+          icon.className = 'fa-solid fa-eye';
+        }
+      });
+
+      // Delete confirmation
+      document.getElementById('btnConfirmDelete').addEventListener('click', executeDeleteItem);
+    }
+
+    function handleFileSelected(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Reset file input value so user can select same image again if desired
+      event.target.value = '';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Data = e.target.result.split(',')[1];
+        const mimeType = file.type || 'image/jpeg';
+        
+        processTagImageWithGemini(base64Data, mimeType, e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function processTagImageWithGemini(base64Data, mimeType, fullDataUrl) {
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        showToast('API Key assente. Inserisci una chiave valida.', 'error');
+        openSettingsModal();
+        return;
+      }
+
+      showAiLoader(true, "Compressione ed estrazione dati con Gemini AI...");
+
+      try {
+        const promptText = `Analizza questa foto di un'etichetta di abbigliamento/moda. 
+Estrai i seguenti campi in un formato JSON pulito ed esatto:
+1. "barcode": Il codice a barre numerico (EAN/UPC) se presente (oppure stringa vuota "" se non presente).
+2. "product_code": Il codice articolo, SKU, modello o riferimento del capo (es. "ART. 1234", "FA-90", ecc.). Se incerto, inserisci un codice logico.
+3. "product_name": Nome o descrizione sintetica del capo (es. "Abito Seta", "Camicia Lino", "Pantalone Denim").
+4. "size": La taglia del capo (es. S, M, L, XL, 40, 42, 44, 46, ecc.).
+5. "price": Il prezzo di vendita originale in numeri float (es. 49.90). Se assente o non leggibile, inserisci 0.
+
+Restituisci SOLO un oggetto JSON privo di blocchi markdown extra, con queste chiavi:
+{"barcode": "", "product_code": "", "product_name": "", "size": "", "price": 0}`;
+
+        const payload = {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: promptText },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        };
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Errore HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!jsonText) {
+          throw new Error("Risposta vuota da Gemini AI");
+        }
+
+        let parsedData = {};
+        try {
+          parsedData = JSON.parse(jsonText);
+        } catch (pErr) {
+          console.warn("Parsing JSON fallito, tentato fallback regex", jsonText);
+          const cleaned = jsonText.replace(/```json|```/g, '').trim();
+          parsedData = JSON.parse(cleaned);
+        }
+
+        showAiLoader(false);
+
+        // Pre-fill item and open verification modal
+        const origPrice = parseFloat(parsedData.price) || 0;
+        const calcPrice = origPrice > 0 ? (origPrice * 2.8).toFixed(2) : '0.00';
+
+        openVerifyModal({
+          barcode: parsedData.barcode || '',
+          product_code: parsedData.product_code || '',
+          product_name: parsedData.product_name || 'Capo Abbigliamento',
+          size: (parsedData.size || '').toString().toUpperCase(),
+          quantity: 1,
+          price_original: origPrice ? origPrice.toFixed(2) : '',
+          price_calc: calcPrice,
+          image_preview: fullDataUrl
+        }, 'Etichetta Analizzata con AI');
+
+        showToast('Etichetta analizzata con successo!', 'success');
+
+      } catch (error) {
+        showAiLoader(false);
+        console.error("Gemini Vision API Error:", error);
+        showToast(`Impossibile leggere l'etichetta: ${error.message}`, 'error');
+
+        // Fallback to manual entry modal
+        openVerifyModalForManual();
+      }
+    }
+
+    function showAiLoader(show, statusText = '') {
+      const overlay = document.getElementById('aiLoadingOverlay');
+      const textEl = document.getElementById('aiLoadingStatus');
+      if (show) {
+        if (statusText) textEl.textContent = statusText;
+        overlay.classList.remove('hidden');
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function openVerifyModal(item, title = 'Verifica Dati Articolo') {
+      pendingItem = item;
+      document.getElementById('modalVerifyTitle').textContent = title;
+
+      document.getElementById('inputBarcode').value = item.barcode || '';
+      document.getElementById('inputProductCode').value = item.product_code || '';
+      document.getElementById('inputProductName').value = item.product_name || '';
+      document.getElementById('inputSize').value = item.size || '';
+      document.getElementById('inputQuantity').value = item.quantity || 1;
+      document.getElementById('inputPriceOriginal').value = item.price_original || '';
+      document.getElementById('inputPriceCalc').value = item.price_calc || '';
+
+      const imgContainer = document.getElementById('verifyImgPreviewContainer');
+      const imgPreview = document.getElementById('verifyImgPreview');
+      if (item.image_preview) {
+        imgPreview.src = item.image_preview;
+        imgContainer.classList.remove('hidden');
+      } else {
+        imgContainer.classList.add('hidden');
+      }
+
+      document.getElementById('modalVerify').classList.remove('hidden');
+    }
+
+    function openVerifyModalForManual() {
+      openVerifyModal({
+        barcode: '',
+        product_code: '',
+        product_name: '',
+        size: '',
+        quantity: 1,
+        price_original: '',
+        price_calc: '',
+        image_preview: null
+      }, 'Nuovo Inserimento Manuale');
+    }
+
+    function closeVerifyModal() {
+      document.getElementById('modalVerify').classList.add('hidden');
+      pendingItem = null;
+    }
+
+    function adjustFormQty(delta) {
+      const qtyInput = document.getElementById('inputQuantity');
+      let val = parseInt(qtyInput.value) || 1;
+      val = Math.max(1, val + delta);
+      qtyInput.value = val;
+    }
+
+    function confirmSaveItem() {
+      const barcode = document.getElementById('inputBarcode').value.trim();
+      const productCode = document.getElementById('inputProductCode').value.trim();
+      const productName = document.getElementById('inputProductName').value.trim();
+      const size = document.getElementById('inputSize').value.trim().toUpperCase();
+      const qtyToAdd = parseInt(document.getElementById('inputQuantity').value) || 1;
+      const priceOrig = parseFloat(document.getElementById('inputPriceOriginal').value) || 0;
+      const priceCalc = parseFloat(document.getElementById('inputPriceCalc').value) || (priceOrig * 2.8);
+
+      // Validation
+      if (!productCode && !barcode) {
+        showToast('Inserisci almeno il Codice Prodotto o il Barcode!', 'warning');
+        return;
+      }
+      if (!productName) {
+        showToast('Inserisci il Nome o Descrizione del capo!', 'warning');
+        return;
+      }
+      if (!size) {
+        showToast('Inserisci la Taglia del capo!', 'warning');
+        return;
+      }
+
+      const now = new Date();
+      const dateString = now.toLocaleDateString('it-IT') + ' ' + now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+      // Upsert logic search:
+      // Match if barcode is present AND equal, OR if product_code + size are equal
+      let existingIndex = -1;
+
+      if (barcode) {
+        existingIndex = inventory.findIndex(item => item.barcode && item.barcode.toLowerCase() === barcode.toLowerCase());
+      }
+
+      if (existingIndex === -1 && productCode && size) {
+        existingIndex = inventory.findIndex(item => 
+          item.product_code.toLowerCase() === productCode.toLowerCase() && 
+          item.size.toLowerCase() === size.toLowerCase()
+        );
+      }
+
+      if (existingIndex >= 0) {
+        // UPDATE Existing
+        const existing = inventory[existingIndex];
+        const oldQty = existing.quantity;
+        const newQty = oldQty + qtyToAdd;
+
+        inventory[existingIndex] = {
+          ...existing,
+          barcode: barcode || existing.barcode,
+          product_code: productCode || existing.product_code,
+          product_name: productName || existing.product_name,
+          size: size || existing.size,
+          quantity: newQty,
+          price_original: priceOrig || existing.price_original,
+          price_calc: priceCalc || existing.price_calc,
+          updated_at: dateString
+        };
+
+        saveInventory();
+        closeVerifyModal();
+        showToast(`Quantità aggiornata da ${oldQty} a ${newQty} per "${productName}" (${size})!`, 'info');
+
+      } else {
+        // INSERT New Item
+        const newItem = {
+          id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          barcode: barcode,
+          product_code: productCode,
+          product_name: productName,
+          size: size,
+          quantity: qtyToAdd,
+          price_original: priceOrig,
+          price_calc: priceCalc,
+          updated_at: dateString
+        };
+
+        inventory.unshift(newItem);
+        saveInventory();
+        closeVerifyModal();
+        showToast(`Nuovo articolo aggiunto: "${productName}" (${size})!`, 'success');
+      }
+    }
+
+    function renderInventory() {
+      const container = document.getElementById('inventoryList');
+      const emptyState = document.getElementById('emptyState');
+      const statUnique = document.getElementById('statUniqueCount');
+      const statTotal = document.getElementById('statTotalQuantity');
+      const badgeCount = document.getElementById('badgeItemCount');
+      const quickBar = document.getElementById('mobileQuickBar');
+      const quickTotals = document.getElementById('quickBarTotals');
+
+      // Update counters
+      const uniqueCount = inventory.length;
+      const totalQty = inventory.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+      statUnique.textContent = uniqueCount;
+      statTotal.textContent = totalQty;
+      badgeCount.textContent = `${uniqueCount} ${uniqueCount === 1 ? 'Voce' : 'Voci'}`;
+
+      if (uniqueCount > 0) {
+        quickBar.classList.remove('translate-y-full');
+        quickTotals.textContent = `${uniqueCount} capi (${totalQty} pz)`;
+      } else {
+        quickBar.classList.add('translate-y-full');
+      }
+
+      // Filter list
+      let filtered = inventory;
+      if (currentSearchQuery) {
+        filtered = inventory.filter(item => 
+          (item.product_name && item.product_name.toLowerCase().includes(currentSearchQuery)) ||
+          (item.product_code && item.product_code.toLowerCase().includes(currentSearchQuery)) ||
+          (item.barcode && item.barcode.toLowerCase().includes(currentSearchQuery)) ||
+          (item.size && item.size.toLowerCase().includes(currentSearchQuery))
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        if (inventory.length === 0) {
+          container.appendChild(emptyState);
+        } else {
+          container.innerHTML = `
+            <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 text-center text-slate-400 text-xs">
+              <i class="fa-solid fa-magnifying-glass text-lg mb-2 text-slate-500"></i>
+              <p class="font-semibold text-slate-300">Nessun risultato trovato per "${currentSearchQuery}"</p>
+              <p class="mt-0.5">Prova a cercare con un altro termine o codice.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      // Render cards
+      let html = '';
+      filtered.forEach(item => {
+        const origP = item.price_original ? `€${parseFloat(item.price_original).toFixed(2)}` : '-';
+        const calcP = item.price_calc ? `€${parseFloat(item.price_calc).toFixed(2)}` : '-';
+
+        html += `
+          <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3.5 shadow-md hover:border-slate-600 transition space-y-3">
+            
+            <!-- Top Row: Name, Size Badge & Delete Button -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="px-2 py-0.5 rounded-md bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[11px] font-bold font-mono uppercase">
+                    Taglia: ${item.size}
+                  </span>
+                  ${item.product_code ? `
+                    <span class="text-[11px] font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-700/60">
+                      SKU: ${escapeHtml(item.product_code)}
+                    </span>
+                  ` : ''}
+                </div>
+                <h3 class="text-sm font-bold text-white mt-1 truncate" title="${escapeHtml(item.product_name)}">
+                  ${escapeHtml(item.product_name)}
+                </h3>
+              </div>
+
+              <!-- Delete Button -->
+              <button onclick="promptDeleteItem('${item.id}')" class="text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-xl transition shrink-0" title="Elimina Articolo">
+                <i class="fa-solid fa-trash-can text-sm"></i>
+              </button>
+            </div>
+
+            <!-- Middle Row: Barcode & Price details -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-900/70 rounded-xl p-2.5 text-[11px] border border-slate-700/50">
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Barcode</span>
+                <span class="font-mono text-slate-200 truncate block">${item.barcode ? escapeHtml(item.barcode) : '<i class="text-slate-500">N/D</i>'}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Prezzo Orig.</span>
+                <span class="text-slate-300 font-semibold">${origP}</span>
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <span class="text-brand-400 block text-[10px] uppercase font-semibold">Prezzo 2.8</span>
+                <span class="text-brand-300 font-bold font-mono">${calcP}</span>
+              </div>
+            </div>
+
+            <!-- Bottom Row: Quantity Controls & Last Updated -->
+            <div class="flex items-center justify-between pt-1 text-xs">
+              <span class="text-[10px] text-slate-400 flex items-center gap-1">
+                <i class="fa-regular fa-clock"></i> ${item.updated_at || 'Recente'}
+              </span>
+
+              <!-- Inline Quantity Adjuster -->
+              <div class="flex items-center space-x-1.5 bg-slate-900 border border-slate-700 rounded-xl p-1">
+                <button onclick="updateItemQuantity('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs transition active:scale-95">
+                  <i class="fa-solid fa-minus"></i>
+                </button>
+                <span class="w-8 text-center font-bold text-white font-mono text-xs">${item.quantity}</span>
+                <button onclick="updateItemQuantity('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs transition active:scale-95">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function updateItemQuantity(id, delta) {
+      const idx = inventory.findIndex(item => item.id === id);
+      if (idx >= 0) {
+        const item = inventory[idx];
+        const newQty = item.quantity + delta;
+        
+        if (newQty <= 0) {
+          promptDeleteItem(id);
+        } else {
+          item.quantity = newQty;
+          const now = new Date();
+          item.updated_at = now.toLocaleDateString('it-IT') + ' ' + now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+          saveInventory();
+        }
+      }
+    }
+
+    function promptDeleteItem(id) {
+      const item = inventory.find(i => i.id === id);
+      if (!item) return;
+
+      deleteTargetId = id;
+      document.getElementById('deleteItemName').textContent = `"${item.product_name}" (Taglia: ${item.size})`;
+      document.getElementById('modalDelete').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('modalDelete').classList.add('hidden');
+      deleteTargetId = null;
+    }
+
+    function executeDeleteItem() {
+      if (!deleteTargetId) return;
+
+      inventory = inventory.filter(i => i.id !== deleteTargetId);
+      saveInventory();
+      closeDeleteModal();
+      showToast('Articolo rimosso dall\'inventario.', 'info');
+    }
+
+    function openClearAllModal() {
+      if (inventory.length === 0) {
+        showToast('L\'inventario è già vuoto!', 'info');
+        return;
+      }
+      document.getElementById('modalClearAll').classList.remove('hidden');
+    }
+
+    function closeClearAllModal() {
+      document.getElementById('modalClearAll').classList.add('hidden');
+    }
+
+    function confirmClearAll() {
+      inventory = [];
+      saveInventory();
+      closeClearAllModal();
+      showToast('Inventario completamente svuotato.', 'info');
+    }
+
+    function exportCSV() {
+      if (inventory.length === 0) {
+        showToast('Nessun articolo presente nell\'inventario da esportare!', 'warning');
+        return;
+      }
+
+      // Headers requested: Barcode;Codice_Prodotto;Nome_Prodotto;Taglia;Quantita;Prezzo_Originale;Prezzo_2.8;Data_Aggiornamento
+      const headers = [
+        'Barcode',
+        'Codice_Prodotto',
+        'Nome_Prodotto',
+        'Taglia',
+        'Quantita',
+        'Prezzo_Originale',
+        'Prezzo_2.8',
+        'Data_Aggiornamento'
+      ];
+
+      const rows = [headers.join(';')];
+
+      inventory.forEach(item => {
+        const row = [
+          escapeCsvValue(item.barcode || ''),
+          escapeCsvValue(item.product_code || ''),
+          escapeCsvValue(item.product_name || ''),
+          escapeCsvValue(item.size || ''),
+          item.quantity || 1,
+          item.price_original ? parseFloat(item.price_original).toFixed(2).replace('.', ',') : '0,00',
+          item.price_calc ? parseFloat(item.price_calc).toFixed(2).replace('.', ',') : '0,00',
+          escapeCsvValue(item.updated_at || '')
+        ];
+        rows.push(row.join(';'));
+      });
+
+      const csvContent = rows.join('\r\n');
+
+      // Prepend UTF-8 BOM (\uFEFF) to guarantee proper accents and character encoding in Google Sheets / Excel
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const now = new Date();
+      const timestamp = now.toISOString().slice(0,10) + '_' + now.getHours() + now.getMinutes();
+      const filename = `Inventario_Fashion_Sheets_${timestamp}.csv`;
+
+      // Trigger Download
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast(`File CSV scaricato: ${filename}`, 'success');
+    }
+
+    function escapeCsvValue(val) {
+      if (val === null || val === undefined) return '""';
+      let str = String(val).replace(/"/g, '""');
+      if (str.includes(';') || str.includes('\n') || str.includes('"')) {
+        return `"${str}"`;
+      }
+      return `"${str}"`;
+    }
+
+    function openSettingsModal() {
+      document.getElementById('inputApiKey').value = getApiKey();
+      document.getElementById('modalSettings').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('modalSettings').classList.add('hidden');
+    }
+
+    function saveSettingsModal() {
+      const key = document.getElementById('inputApiKey').value.trim();
+      setApiKey(key);
+      closeSettingsModal();
+      showToast('Chiave API salvata con successo!', 'success');
+    }
+
+    function openGuideModal() {
+      document.getElementById('modalGuide').classList.remove('hidden');
+    }
+
+    function closeGuideModal() {
+      document.getElementById('modalGuide').classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+
+      const toast = document.createElement('div');
+      toast.className = `p-3 rounded-2xl shadow-xl border text-xs font-semibold flex items-center justify-between space-x-2 transition-all duration-300 transform -translate-y-2 opacity-0 pointer-events-auto`;
+
+      let icon = 'fa-circle-info';
+      if (type === 'success') {
+        toast.className += ' bg-emerald-900/90 border-emerald-500/50 text-emerald-100';
+        icon = 'fa-circle-check';
+      } else if (type === 'warning') {
+        toast.className += ' bg-amber-900/90 border-amber-500/50 text-amber-100';
+        icon = 'fa-triangle-exclamation';
+      } else if (type === 'error') {
+        toast.className += ' bg-red-900/90 border-red-500/50 text-red-100';
+        icon = 'fa-circle-xmark';
+      } else {
+        toast.className += ' bg-slate-800/95 border-slate-600 text-slate-100';
+      }
+
+      toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid ${icon} text-sm"></i>
+          <span>${escapeHtml(message)}</span>
+        </div>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('-translate-y-2', 'opacity-0');
+      });
+
+      // Remove after 3.5s
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&rawgt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
