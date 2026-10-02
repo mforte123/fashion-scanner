@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StyleStock - Inventario Abbigliamento Smartphone</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome per icone moderne -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        /* Transizioni e animazioni personalizzate */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .touch-active:active { transform: scale(0.97); }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 9999px; }
+    </style>
+</head>
+<body class="h-full flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-white">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-slate-800/80 px-4 py-3 shadow-lg">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-950/50">
+                    <i class="fa-solid fa-[#shirt] text-lg"></i>
+                    <i class="fa-solid fa-shirt text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight text-white flex items-center gap-2">
+                        StyleStock <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Pro</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Scanner & Inventario Fast</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openSettingsModal()" class="w-10 h-10 rounded-xl bg-slate-800/90 border border-slate-700/60 text-slate-300 hover:text-white flex items-center justify-center touch-active transition-colors" title="Impostazioni API">
+                    <i class="fa-solid fa-gear text-slate-300"></i>
+                </button>
+                <button onclick="exportToCSV()" class="w-10 h-10 rounded-xl bg-slate-800/90 border border-slate-700/60 text-emerald-400 hover:text-emerald-300 flex items-center justify-center touch-active transition-colors" title="Esporta CSV">
+                    <i class="fa-solid fa-file-csv text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 overflow-y-auto px-4 py-4 max-w-4xl w-full mx-auto space-y-5 pb-28">
+
+        <!-- KPI Dashboard Stats -->
+        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="glass-panel p-3.5 rounded-2xl flex flex-col justify-between border-slate-800/80 shadow-sm">
+                <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Capi Unici
+                </span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="stat-unique-items" class="text-xl font-extrabold text-white">0</span>
+                    <span class="text-[10px] text-slate-500">Modelli</span>
+                </div>
+            </div>
+            <div class="glass-panel p-3.5 rounded-2xl flex flex-col justify-between border-slate-800/80 shadow-sm">
+                <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-emerald-400"></i> Qta Totale
+                </span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="stat-total-qty" class="text-xl font-extrabold text-emerald-400">0</span>
+                    <span class="text-[10px] text-slate-500">Pezzi</span>
+                </div>
+            </div>
+            <div class="glass-panel p-3.5 rounded-2xl flex flex-col justify-between border-slate-800/80 shadow-sm">
+                <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-tag text-sky-400"></i> Valore Cart.
+                </span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="stat-total-price" class="text-lg font-bold text-sky-300">€0.00</span>
+                    <span class="text-[10px] text-slate-500">Base</span>
+                </div>
+            </div>
+            <div class="glass-panel p-3.5 rounded-2xl flex flex-col justify-between border-slate-800/80 shadow-sm bg-gradient-to-br from-slate-900/80 to-emerald-950/30 border-emerald-900/30">
+                <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Valore 2.8
+                </span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="stat-total-price28" class="text-lg font-extrabold text-emerald-300">€0.00</span>
+                    <span class="text-[10px] text-emerald-500/80 font-bold">x2.8</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls & Filters Toolbar -->
+        <section class="glass-panel p-3 rounded-2xl flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative w-full flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="search-input" oninput="renderInventory()" placeholder="Cerca per Nome, SKU, Barcode o Taglia..." 
+                       class="w-full bg-slate-900/90 border border-slate-700/70 text-slate-100 text-sm rounded-xl pl-9 pr-8 py-2.5 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-slate-500 transition-all">
+                <button onclick="clearSearch()" id="clear-search-btn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+            </div>
+            <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+                <select id="sort-select" onchange="renderInventory()" class="bg-slate-900/90 border border-slate-700/70 text-slate-300 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500">
+                    <option value="newest">Più recenti</option>
+                    <option value="oldest">Meno recenti</option>
+                    <option value="name">Nome (A-Z)</option>
+                    <option value="price-desc">Prezzo (Alto-Basso)</option>
+                    <option value="qty-desc">Quantità (Maggiore)</option>
+                </select>
+                <button onclick="openClearConfirmModal()" class="px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 touch-active transition-colors shrink-0">
+                    <i class="fa-solid fa-trash-can"></i> Svuota
+                </button>
+            </div>
+        </section>
+
+        <!-- Inventory Grid Section -->
+        <section id="inventory-container" class="space-y-3">
+            <!-- Items rendered dynamically via JS -->
+        </section>
+
+        <!-- Empty State View -->
+        <div id="empty-state" class="hidden glass-panel p-8 rounded-3xl text-center space-y-4 my-6 border-dashed border-slate-800">
+            <div class="w-16 h-16 bg-slate-800/80 rounded-2xl flex items-center justify-center mx-auto text-slate-500 text-2xl">
+                <i class="fa-solid fa-barcode"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="font-bold text-white text-base">Nessun capo registrato</h3>
+                <p class="text-xs text-slate-400 max-w-xs mx-auto">Scansiona un'etichetta o inserisci manualmente un nuovo capo d'abbigliamento per iniziare.</p>
+            </div>
+            <button onclick="triggerCameraInput()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm shadow-lg shadow-emerald-950/50 touch-active transition-all">
+                <i class="fa-solid fa-camera"></i> Scansiona Ora
+            </button>
+        </div>
+    </main>
+
+    <!-- Sticky Bottom Action Button for Mobile -->
+    <div class="fixed bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none">
+        <div class="max-w-4xl mx-auto flex items-center gap-3 pointer-events-auto">
+            <!-- Hidden File Input for Mobile Camera / Upload -->
+            <input type="file" id="camera-file-input" accept="image/*" capture="environment" onchange="handleImageCaptured(event)" class="hidden">
+            <input type="file" id="gallery-file-input" accept="image/*" onchange="handleImageCaptured(event)" class="hidden">
+
+            <button onclick="triggerCameraInput()" class="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-base shadow-xl shadow-emerald-950/80 flex items-center justify-center gap-2 touch-active transition-all border border-emerald-400/30">
+                <i class="fa-solid fa-camera text-lg"></i>
+                <span>Scansiona Capo / Etichetta</span>
+            </button>
+            <button onclick="triggerGalleryInput()" class="w-14 h-14 rounded-2xl bg-slate-800/90 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center touch-active transition-colors shadow-lg shrink-0" title="Carica da Galleria">
+                <i class="fa-solid fa-image text-lg"></i>
+            </button>
+            <button onclick="openManualForm()" class="w-14 h-14 rounded-2xl bg-slate-800/90 border border-slate-700/80 text-emerald-400 hover:text-emerald-300 flex items-center justify-center touch-active transition-colors shadow-lg shrink-0" title="Inserimento Manuale">
+                <i class="fa-solid fa-plus text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- AI Loading & Image Compression Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center p-6 text-center space-y-5">
+        <div class="relative">
+            <div class="w-20 h-20 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center text-emerald-400">
+                <i class="fa-solid fa-microchip text-xl animate-pulse"></i>
+            </div>
+        </div>
+        <div class="space-y-2 max-w-xs">
+            <h3 id="loading-status-title" class="text-lg font-bold text-white">Elaborazione in corso...</h3>
+            <p id="loading-status-desc" class="text-xs text-slate-400">Compressione foto a 800px & analisi Gemini Vision...</p>
+        </div>
+        <div id="loading-preview-wrapper" class="w-28 h-28 rounded-2xl overflow-hidden border-2 border-emerald-500/40 shadow-xl bg-slate-900 hidden">
+            <img id="loading-preview-img" class="w-full h-full object-cover" alt="Anteprima">
+        </div>
+    </div>
+
+    <!-- Add / Edit Item Modal -->
+    <div id="item-modal" class="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80 sticky top-0 z-10">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <h3 id="modal-title" class="font-bold text-slate-100 text-base">Scheda Capo d'Abbigliamento</h3>
+                </div>
+                <button onclick="closeItemModal()" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Body -->
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-4">
+                
+                <!-- AI Status Alert Banner -->
+                <div id="ai-status-banner" class="hidden p-3 rounded-xl border text-xs flex items-start gap-2.5">
+                    <i id="ai-status-icon" class="fa-solid fa-circle-info text-base mt-0.5 shrink-0"></i>
+                    <div id="ai-status-text" class="leading-relaxed"></div>
+                </div>
+
+                <!-- Image Preview Section -->
+                <div class="flex items-center gap-4 p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
+                    <div class="w-24 h-24 rounded-xl bg-slate-800 overflow-hidden shrink-0 border border-slate-700/60 relative">
+                        <img id="form-img-preview" src="" alt="Foto Capo" class="w-full h-full object-cover hidden">
+                        <div id="form-img-placeholder" class="w-full h-full flex flex-col items-center justify-center text-slate-500 text-xs">
+                            <i class="fa-solid fa-image text-2xl mb-1"></i>
+                            <span>No Foto</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-1.5">
+                        <span class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Foto Compressa (Max 800px)</span>
+                        <p class="text-xs text-slate-400">Immagine ridimensionata automaticamente per risparmiare memoria dispositivo e velocizzare l'elaborazione.</p>
+                        <button type="button" onclick="triggerCameraInput()" class="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 pt-1">
+                            <i class="fa-solid fa-arrows-rotate"></i> Cambia Foto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Fields -->
+                <form id="item-form" onsubmit="saveItem(event)" class="space-y-3.5">
+                    <input type="hidden" id="form-item-id" value="">
+                    <input type="hidden" id="form-image-data" value="">
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Barcode Code -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">QR Code / Barcode</label>
+                            <div class="relative">
+                                <input type="text" id="form-barcode" placeholder="es. 801234567890" 
+                                       class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500 font-mono">
+                            </div>
+                            <span class="text-[10px] text-slate-500 mt-0.5 block">Regola unione: quantità +1 solo se il codice è identico.</span>
+                        </div>
+                        <!-- SKU Code -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Codice SKU / Modello</label>
+                            <input type="text" id="form-sku" placeholder="es. ART-9920" 
+                                   class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500 font-mono">
+                        </div>
+                    </div>
+
+                    <!-- Item Name -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Nome / Descrizione Capo <span class="text-emerald-400">*</span></label>
+                        <input type="text" id="form-name" required placeholder="es. Giacca in Lino Beige Slim Fit" 
+                               class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Size -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Taglia</label>
+                            <input type="text" id="form-size" placeholder="es. M, L, 42, 44, XL" 
+                                   class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <!-- Quantity -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Quantità (Pezzi)</label>
+                            <input type="number" id="form-qty" min="1" value="1" required
+                                   class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs font-bold rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <!-- Original Tag Price -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Prezzo Cartellino (€)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">€</span>
+                                <input type="number" step="0.01" min="0" id="form-price" oninput="calculatePrice28()" placeholder="0.00" 
+                                       class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs font-bold rounded-xl pl-7 pr-3 py-2.5 focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <!-- Price 2.8 Calculated -->
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-400 mb-1">Prezzo x 2.8 (€)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 text-xs">€</span>
+                                <input type="number" step="0.01" min="0" id="form-price28" placeholder="0.00" 
+                                       class="w-full bg-slate-950 border border-emerald-500/50 text-emerald-300 text-xs font-extrabold rounded-xl pl-7 pr-3 py-2.5 focus:outline-none focus:border-emerald-400">
+                            </div>
+                            <span class="text-[10px] text-slate-500 mt-0.5 block">Calcolato automat. (x 2.8)</span>
+                        </div>
+                    </div>
+
+                    <!-- Modal Actions -->
+                    <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-800 mt-4">
+                        <button type="button" onclick="closeItemModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold touch-active">
+                            Annulla
+                        </button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 touch-active">
+                            <i class="fa-solid fa-floppy-disk"></i> Salva in Inventario
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center text-xl mx-auto">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <div class="text-center space-y-1">
+                <h3 class="font-bold text-white text-base">Eliminare questo capo?</h3>
+                <p id="delete-item-name" class="text-xs text-slate-400 font-medium truncate px-2"></p>
+                <p class="text-[11px] text-slate-500">L'operazione non può essere annullata.</p>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+                <button onclick="closeDeleteModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold touch-active">Annulla</button>
+                <button onclick="confirmDeleteItem()" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-950/50 touch-active">Elimina</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Clear Inventory Confirmation Modal -->
+    <div id="clear-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center text-xl mx-auto">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="text-center space-y-1">
+                <h3 class="font-bold text-white text-base">Svuotare intero inventario?</h3>
+                <p class="text-xs text-slate-400">Tutti i capi registrati verranno permanentemente cancellati dal dispositivo.</p>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+                <button onclick="closeClearConfirmModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold touch-active">Annulla</button>
+                <button onclick="confirmClearAllInventory()" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-950/50 touch-active">Svuota Tutto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings & API Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-emerald-400"></i>
+                    <h3 class="font-bold text-white text-base">Impostazioni & API Key</h3>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Chiave API Gemini Personalizzata (Opzionale)</label>
+                    <input type="password" id="custom-api-key" placeholder="Lascia vuoto per chiave automatica" 
+                           class="w-full bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500 font-mono">
+                    <p class="text-[11px] text-slate-400 mt-1">Se inserita, verrà usata per le chiamate a `gemini-3-flash-preview`. Se la chiave non funziona o manca, l'app passa comunque alla compilazione manuale senza blocchi.</p>
+                </div>
+
+                <div class="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs space-y-1.5">
+                    <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> Fallback e Sicurezza
+                    </span>
+                    <p class="text-slate-400 text-[11px]">Compressione automatica su Canvas (JPEG max 800px) per prevenire saturazione di memoria su browser smartphone Android/iOS.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Annulla</button>
+                <button onclick="saveSettings()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">Salva Impostazioni</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none space-y-2"></div>
+
+    <script>
+        // Storage Key & Initial Data State
+        const STORAGE_KEY = 'fashion_inventory_items_v2';
+        const API_KEY_STORAGE_KEY = 'fashion_inventory_gemini_key';
+
+        let inventory = [];
+        let itemToDeleteId = null;
+        let activeImageBase64 = null;
+
+        // Initial setup on Window Load
+        window.onload = function() {
+            loadSettings();
+            loadInventory();
+            renderInventory();
+        };
+
+        // Load Settings
+        function loadSettings() {
+            const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+            if (savedKey) {
+                document.getElementById('custom-api-key').value = savedKey;
+            }
+        }
+
+        // Save Settings
+        function saveSettings() {
+            const key = document.getElementById('custom-api-key').value.trim();
+            if (key) {
+                localStorage.setItem(API_KEY_STORAGE_KEY, key);
+            } else {
+                localStorage.removeItem(API_KEY_STORAGE_KEY);
+            }
+            closeSettingsModal();
+            showToast("Impostazioni salvate con successo!", "success");
+        }
+
+        // Load Inventory from LocalStorage
+        function loadInventory() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    inventory = JSON.parse(stored);
+                } else {
+                    // Pre-fill with sample items for initial demonstration
+                    inventory = [
+                        {
+                            id: 'item-demo-1',
+                            barcode: '805123456789',
+                            sku: 'BLZ-2024-BE',
+                            name: 'Blazer Monopetto Lino Beige',
+                            size: '48',
+                            price: 89.90,
+                            price28: 251.72,
+                            qty: 2,
+                            image: null,
+                            createdAt: new Date().toISOString()
+                        },
+                        {
+                            id: 'item-demo-2',
+                            barcode: '805987654321',
+                            sku: 'JNS-SLIM-01',
+                            name: 'Jeans Slim Fit Stretch Blu Scuro',
+                            size: '32',
+                            price: 49.90,
+                            price28: 139.72,
+                            qty: 4,
+                            image: null,
+                            createdAt: new Date(Date.now() - 3600000).toISOString()
+                        }
+                    ];
+                    saveInventoryToStorage();
+                }
+            } catch (e) {
+                console.error("Errore lettura localStorage:", e);
+                inventory = [];
+            }
+        }
+
+        // Save Inventory to LocalStorage
+        function saveInventoryToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+            } catch (e) {
+                console.error("Errore salvataggio localStorage:", e);
+                showToast("Attenzione: Memoria locale piena per le immagini salvate.", "warning");
+            }
+        }
+
+        // Image Compression Utility: Scales down any image to max 800px JPEG to avoid browser crashes
+        function compressImage(file, maxDimension = 800, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Calculate new dimensions respecting aspect ratio
+                        if (width > height) {
+                            if (width > maxDimension) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            }
+                        } else {
+                            if (height > maxDimension) {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Export compressed JPEG base64 string
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedDataUrl);
+                    };
+                    img.onerror = function(err) {
+                        reject(err);
+                    };
+                };
+                reader.onerror = function(err) {
+                    reject(err);
+                };
+            });
+        }
+
+        function triggerCameraInput() {
+            document.getElementById('camera-file-input').click();
+        }
+
+        function triggerGalleryInput() {
+            document.getElementById('gallery-file-input').click();
+        }
+
+        async function handleImageCaptured(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Reset file input value to allow re-selection
+            event.target.value = '';
+
+            // Show loading overlay
+            showLoading(true, "Compressione Immagine...", "Ottimizzazione foto a 800px per cellulare...");
+
+            try {
+                // Step 1: Compress Image
+                const compressedBase64 = await compressImage(file, 800, 0.82);
+                activeImageBase64 = compressedBase64;
+
+                // Update preview in spinner
+                document.getElementById('loading-preview-img').src = compressedBase64;
+                document.getElementById('loading-preview-wrapper').classList.remove('hidden');
+
+                // Step 2: Analyze with Gemini AI
+                updateLoadingStatus("Analisi Intelligenza Artificiale...", "Estrazione Barcode, SKU, Nome, Taglia e Prezzo...");
+                
+                analyzeImageWithGemini(compressedBase64);
+
+            } catch (error) {
+                console.error("Errore compressione immagine:", error);
+                showLoading(false);
+                showToast("Impossibile elaborare l'immagine. Apertura form manuale.", "warning");
+                openManualForm(null, activeImageBase64, "Errore caricamento immagine. Inserisci i dati manualmente.");
+            }
+        }
+
+        async function analyzeImageWithGemini(base64DataUrl) {
+            // Strip data:image/jpeg;base64, header for Gemini inlineData
+            const cleanBase64 = base64DataUrl.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+
+            // Retrieve custom API key if set, or empty string (handled by runtime canvas platform)
+            const userCustomKey = localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+            const apiKey = userCustomKey;
+
+            const systemPrompt = "Sei un assistente esperto in inventario di abbigliamento e lettura etichette per negozi di moda. Il tuo compito è analizzare la foto fornita dell'etichetta o del capo ed estrarre con massima precisione i dettagli nel formato JSON richiesto.";
+
+            const userInstruction = "Analizza l'immagine ed estrai i seguenti dati dell'articolo di abbigliamento: codice a barre (barcode), codice modello/SKU, nome descrittivo del capo (es. Giacca Beige Lino, Jeans Slim fit), taglia (es. S, M, L, XL, 42, 44), e prezzo numerico stampato sul cartellino (es. 49.90). Se un campo non è rilevabile o assente, restituisci una stringa vuota per il testo e 0 per il prezzo.";
+
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            { text: userInstruction },
+                            {
+                                inlineData: {
+                                    mimeType: "image/jpeg",
+                                    data: cleanBase64
+                                }
+                            }
+                        ]
+                    }
+                ],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            barcode: { type: "STRING" },
+                            sku: { type: "STRING" },
+                            name: { type: "STRING" },
+                            size: { type: "STRING" },
+                            price: { type: "NUMBER" }
+                        },
+                        required: ["name"]
+                    }
+                }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            try {
+                // Call Gemini API with timeout fetch
+                const response = await fetchWithTimeout(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }, 12000); // 12 seconds timeout for fast mobile response
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error Status ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const jsonText = candidate.content.parts[0].text;
+                    const parsedData = JSON.parse(jsonText);
+
+                    showLoading(false);
+                    showToast("Analisi IA completata con successo!", "success");
+                    
+                    // Open modal prefilled with AI detected data
+                    openItemModalWithData({
+                        barcode: parsedData.barcode || '',
+                        sku: parsedData.sku || '',
+                        name: parsedData.name || 'Capo Senza Nome',
+                        size: parsedData.size || '',
+                        price: typeof parsedData.price === 'number' ? parsedData.price : 0,
+                        image: base64DataUrl
+                    }, "Dati estratti automaticamente da Gemini IA. Verificali prima di salvare.", "success");
+
+                } else {
+                    throw new Error("Risposta IA priva di contenuto valido.");
+                }
+
+            } catch (error) {
+                console.warn("Chiamata IA fallita o non disponibile. Fallback manuale attivo:", error);
+                showLoading(false);
+
+                // Graceful Fallback Notice (The app NEVER crashes!)
+                const fallbackMessage = "L'analisi IA non è riuscita (chiave assente o errore di rete). Puoi inserire i dati manualmente con l'anteprima foto presente.";
+                showToast("Modalità manuale attiva", "warning");
+
+                openItemModalWithData({
+                    barcode: '',
+                    sku: '',
+                    name: '',
+                    size: '',
+                    price: 0,
+                    image: base64DataUrl
+                }, fallbackMessage, "warning");
+            }
+        }
+
+        // Fetch wrapper with timeout limit
+        function fetchWithTimeout(url, options, timeoutMs = 10000) {
+            return Promise.race([
+                fetch(url, options),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout richiesta superato')), timeoutMs)
+                )
+            ]);
+        }
+
+        function calculatePrice28() {
+            const priceInput = document.getElementById('form-price').value;
+            const priceVal = parseFloat(priceInput) || 0;
+            const calculated28 = (priceVal * 2.8).toFixed(2);
+            document.getElementById('form-price28').value = calculated28;
+        }
+
+        function openManualForm() {
+            openItemModalWithData({
+                id: '',
+                barcode: '',
+                sku: '',
+                name: '',
+                size: '',
+                price: 0,
+                qty: 1,
+                image: null
+            }, null, null);
+        }
+
+        function openItemModalWithData(data, bannerMsg = null, bannerType = 'info') {
+            document.getElementById('form-item-id').value = data.id || '';
+            document.getElementById('form-barcode').value = data.barcode || '';
+            document.getElementById('form-sku').value = data.sku || '';
+            document.getElementById('form-name').value = data.name || '';
+            document.getElementById('form-size').value = data.size || '';
+            document.getElementById('form-qty').value = data.qty || 1;
+            document.getElementById('form-price').value = data.price ? parseFloat(data.price).toFixed(2) : '';
+            
+            calculatePrice28();
+
+            // Set Image Preview
+            const imgData = data.image || null;
+            document.getElementById('form-image-data').value = imgData || '';
+            const imgPreview = document.getElementById('form-img-preview');
+            const imgPlaceholder = document.getElementById('form-img-placeholder');
+
+            if (imgData) {
+                imgPreview.src = imgData;
+                imgPreview.classList.remove('hidden');
+                imgPlaceholder.classList.add('hidden');
+            } else {
+                imgPreview.src = '';
+                imgPreview.classList.add('hidden');
+                imgPlaceholder.classList.remove('hidden');
+            }
+
+            // Set Banner Message
+            const banner = document.getElementById('ai-status-banner');
+            const bannerText = document.getElementById('ai-status-text');
+            const bannerIcon = document.getElementById('ai-status-icon');
+
+            if (bannerMsg) {
+                banner.classList.remove('hidden', 'bg-emerald-950/40', 'border-emerald-800', 'text-emerald-300', 'bg-amber-950/40', 'border-amber-800', 'text-amber-300');
+                bannerText.textContent = bannerMsg;
+
+                if (bannerType === 'success') {
+                    banner.classList.add('bg-emerald-950/40', 'border-emerald-800', 'text-emerald-300');
+                    bannerIcon.className = 'fa-solid fa-circle-check text-base text-emerald-400 mt-0.5 shrink-0';
+                } else {
+                    banner.classList.add('bg-amber-950/40', 'border-amber-800', 'text-amber-300');
+                    bannerIcon.className = 'fa-solid fa-triangle-exclamation text-base text-amber-400 mt-0.5 shrink-0';
+                }
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            document.getElementById('modal-title').textContent = data.id ? 'Modifica Capo' : 'Nuovo Capo d\'Abbigliamento';
+            document.getElementById('item-modal').classList.remove('hidden');
+        }
+
+        function closeItemModal() {
+            document.getElementById('item-modal').classList.add('hidden');
+            activeImageBase64 = null;
+        }
+
+        function saveItem(event) {
+            event.preventDefault();
+
+            const itemId = document.getElementById('form-item-id').value;
+            const barcode = document.getElementById('form-barcode').value.trim();
+            const sku = document.getElementById('form-sku').value.trim();
+            const name = document.getElementById('form-name').value.trim();
+            const size = document.getElementById('form-size').value.trim().toUpperCase();
+            const qtyInput = parseInt(document.getElementById('form-qty').value) || 1;
+            const priceInput = parseFloat(document.getElementById('form-price').value) || 0;
+            const price28Input = parseFloat(document.getElementById('form-price28').value) || (priceInput * 2.8);
+            const imageData = document.getElementById('form-image-data').value || null;
+
+            if (!name) {
+                showToast("Inserisci un nome per il capo d'abbigliamento.", "warning");
+                return;
+            }
+
+            // RIGOROUS MERGE RULE:
+            // Two items are merged ONLY AND EXCLUSIVELY if they have the exact same non-empty QR Code / Barcode.
+            let isMerged = false;
+
+            if (!itemId && barcode !== '') {
+                // Search for an existing item with exact barcode match
+                const existingIndex = inventory.findIndex(item => item.barcode && item.barcode.trim() === barcode);
+                
+                if (existingIndex !== -1) {
+                    // Match found -> Increment Quantity (x + qtyInput)
+                    inventory[existingIndex].qty += qtyInput;
+                    
+                    // Optionally update price/image if missing in existing
+                    if (!inventory[existingIndex].image && imageData) {
+                        inventory[existingIndex].image = imageData;
+                    }
+
+                    isMerged = true;
+                    showToast(`Barcode esistente! Quantità incrementata (+${qtyInput}). Totale: ${inventory[existingIndex].qty}`, "success");
+                }
+            }
+
+            if (!isMerged) {
+                if (itemId) {
+                    // Update existing item by ID
+                    const idx = inventory.findIndex(i => i.id === itemId);
+                    if (idx !== -1) {
+                        inventory[idx] = {
+                            ...inventory[idx],
+                            barcode,
+                            sku,
+                            name,
+                            size,
+                            qty: qtyInput,
+                            price: priceInput,
+                            price28: price28Input,
+                            image: imageData || inventory[idx].image
+                        };
+                        showToast("Capo aggiornato con successo!", "success");
+                    }
+                } else {
+                    // Add new item entry
+                    const newItem = {
+                        id: 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                        barcode,
+                        sku,
+                        name,
+                        size,
+                        price: priceInput,
+                        price28: price28Input,
+                        qty: qtyInput,
+                        image: imageData,
+                        createdAt: new Date().toISOString()
+                    };
+                    inventory.unshift(newItem);
+                    showToast("Nuovo capo registrato in inventario!", "success");
+                }
+            }
+
+            saveInventoryToStorage();
+            renderInventory();
+            closeItemModal();
+        }
+
+        function adjustQuantity(id, delta) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            item.qty += delta;
+            if (item.qty <= 0) {
+                // If quantity drops to 0, prompt deletion
+                openDeleteModal(id);
+            } else {
+                saveInventoryToStorage();
+                renderInventory();
+            }
+        }
+
+        function editItem(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+            openItemModalWithData(item);
+        }
+
+        function openDeleteModal(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+            itemToDeleteId = id;
+            document.getElementById('delete-item-name').textContent = `${item.name} ${item.size ? '(' + item.size + ')' : ''}`;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            itemToDeleteId = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
+
+        function confirmDeleteItem() {
+            if (!itemToDeleteId) return;
+            inventory = inventory.filter(i => i.id !== itemToDeleteId);
+            saveInventoryToStorage();
+            renderInventory();
+            closeDeleteModal();
+            showToast("Capo eliminato dall'inventario.", "info");
+        }
+
+        function openClearConfirmModal() {
+            if (inventory.length === 0) {
+                showToast("L'inventario è già vuoto.", "info");
+                return;
+            }
+            document.getElementById('clear-modal').classList.remove('hidden');
+        }
+
+        function closeClearConfirmModal() {
+            document.getElementById('clear-modal').classList.add('hidden');
+        }
+
+        function confirmClearAllInventory() {
+            inventory = [];
+            saveInventoryToStorage();
+            renderInventory();
+            closeClearConfirmModal();
+            showToast("Inventario interamente svuotato.", "info");
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventory-container');
+            const emptyState = document.getElementById('empty-state');
+            const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+            const sortBy = document.getElementById('sort-select').value;
+
+            // Show/hide clear search button
+            document.getElementById('clear-search-btn').classList.toggle('hidden', searchQuery === '');
+
+            // Filter
+            let filtered = inventory.filter(item => {
+                const matchName = item.name.toLowerCase().includes(searchQuery);
+                const matchBarcode = item.barcode ? item.barcode.toLowerCase().includes(searchQuery) : false;
+                const matchSku = item.sku ? item.sku.toLowerCase().includes(searchQuery) : false;
+                const matchSize = item.size ? item.size.toLowerCase().includes(searchQuery) : false;
+                return matchName || matchBarcode || matchSku || matchSize;
+            });
+
+            // Sort
+            filtered.sort((a, b) => {
+                if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+                if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+                if (sortBy === 'name') return a.name.localeCompare(b.name);
+                if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
+                if (sortBy === 'qty-desc') return b.qty - a.qty;
+                return 0;
+            });
+
+            // Update Stats KPI
+            calculateStats();
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            // Render Item Cards
+            container.innerHTML = filtered.map(item => {
+                const price28Val = (item.price * 2.8).toFixed(2);
+                const totalPrice = (item.price * item.qty).toFixed(2);
+                const totalPrice28 = (item.price * 2.8 * item.qty).toFixed(2);
+
+                return `
+                    <div class="glass-panel p-3.5 rounded-2xl border-slate-800/90 shadow-md flex items-center justify-between gap-3 hover:border-slate-700/80 transition-all">
+                        <!-- Left: Thumbnail Image -->
+                        <div class="w-20 h-20 rounded-xl bg-slate-950 overflow-hidden shrink-0 border border-slate-800 relative">
+                            ${item.image 
+                                ? `<img src="${item.image}" class="w-full h-full object-cover" alt="Foto capo">`
+                                : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-600 text-[10px]">
+                                     <i class="fa-solid fa-shirt text-xl mb-1"></i> No foto
+                                   </div>`
+                            }
+                            ${item.size ? `<span class="absolute bottom-1 right-1 bg-slate-900/90 text-white font-extrabold text-[10px] px-1.5 py-0.5 rounded-md border border-slate-700">${item.size}</span>` : ''}
+                        </div>
+
+                        <!-- Center: Item Info -->
+                        <div class="flex-1 min-w-0 space-y-1">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${item.barcode ? `<span class="px-1.5 py-0.5 bg-slate-800 text-slate-300 font-mono text-[10px] rounded border border-slate-700/60"><i class="fa-solid fa-barcode mr-1"></i>${item.barcode}</span>` : ''}
+                                ${item.sku ? `<span class="px-1.5 py-0.5 bg-emerald-950/60 text-emerald-300 font-mono text-[10px] rounded border border-emerald-800/40">SKU: ${item.sku}</span>` : ''}
+                            </div>
+                            <h4 class="font-bold text-white text-sm truncate leading-snug">${escapeHtml(item.name)}</h4>
+                            
+                            <!-- Price Tag Display -->
+                            <div class="flex items-baseline gap-3 pt-0.5">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">Cartellino</span>
+                                    <span class="text-xs font-bold text-slate-200">€${item.price.toFixed(2)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-emerald-400 font-semibold block">Prezzo 2.8</span>
+                                    <span class="text-xs font-extrabold text-emerald-300">€${price28Val}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Quantity Controls & Actions -->
+                        <div class="flex flex-col items-end justify-between self-stretch shrink-0">
+                            <div class="flex items-center gap-1">
+                                <button onclick="editItem('${item.id}')" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="openDeleteModal('${item.id}')" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- Quantity Stepper -->
+                            <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl overflow-hidden p-0.5">
+                                <button onclick="adjustQuantity('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-xs touch-active">
+                                    -
+                                </button>
+                                <span class="px-2.5 font-extrabold text-xs text-emerald-400">${item.qty}</span>
+                                <button onclick="adjustQuantity('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-xs touch-active">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateStats() {
+            const uniqueItems = inventory.length;
+            const totalQty = inventory.reduce((sum, item) => sum + item.qty, 0);
+            const totalPrice = inventory.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const totalPrice28 = inventory.reduce((sum, item) => sum + (item.price * 2.8 * item.qty), 0);
+
+            document.getElementById('stat-unique-items').textContent = uniqueItems;
+            document.getElementById('stat-total-qty').textContent = totalQty;
+            document.getElementById('stat-total-price').textContent = `€${totalPrice.toFixed(2)}`;
+            document.getElementById('stat-total-price28').textContent = `€${totalPrice28.toFixed(2)}`;
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            renderInventory();
+        }
+
+        function exportToCSV() {
+            if (inventory.length === 0) {
+                showToast("Nessun dato da esportare.", "warning");
+                return;
+            }
+
+            // UTF-8 BOM Header for Excel & Google Sheets compatibility
+            let csvContent = "\uFEFF";
+            
+            // CSV Column Headers (Italian Standard)
+            const headers = [
+                "QR Code / Barcode",
+                "Codice SKU",
+                "Nome Prodotto",
+                "Taglia",
+                "Prezzo Cartellino (€)",
+                "Prezzo x 2.8 (€)",
+                "Quantita (Pz)",
+                "Valore Totale Cartellino (€)",
+                "Valore Totale 2.8 (€)",
+                "Data Registrazione"
+            ];
+
+            csvContent += headers.map(h => `"${h}"`).join(";") + "\n";
+
+            // Rows Data
+            inventory.forEach(item => {
+                const price28 = (item.price * 2.8).toFixed(2);
+                const totPrice = (item.price * item.qty).toFixed(2);
+                const totPrice28 = (item.price * 2.8 * item.qty).toFixed(2);
+                const dateStr = new Date(item.createdAt).toLocaleString("it-IT");
+
+                const row = [
+                    item.barcode || "",
+                    item.sku || "",
+                    item.name || "",
+                    item.size || "",
+                    item.price.toFixed(2).replace(".", ","),
+                    price28.replace(".", ","),
+                    item.qty,
+                    totPrice.replace(".", ","),
+                    totPrice28.replace(".", ","),
+                    dateStr
+                ];
+
+                csvContent += row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(";") + "\n";
+            });
+
+            // Trigger File Download
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const dateISO = new Date().toISOString().slice(0,10);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Inventario_Abbigliamento_${dateISO}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast("Esportazione CSV completata!", "success");
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let bgColor = 'bg-slate-900 border-slate-700 text-white';
+            let icon = 'fa-circle-info text-sky-400';
+
+            if (type === 'success') {
+                bgColor = 'bg-slate-900 border-emerald-700/80 text-emerald-200';
+                icon = 'fa-circle-check text-emerald-400';
+            } else if (type === 'warning') {
+                bgColor = 'bg-slate-900 border-amber-700/80 text-amber-200';
+                icon = 'fa-triangle-exclamation text-amber-400';
+            }
+
+            toast.className = `p-3 rounded-2xl border ${bgColor} shadow-2xl backdrop-blur-md flex items-center gap-2.5 text-xs font-semibold transform transition-all duration-300 translate-y-[-10px] opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base shrink-0"></i> <span>${escapeHtml(message)}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate In
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+            }, 10);
+
+            // Remove after 3.5s
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function showLoading(show, title = "Elaborazione...", desc = "") {
+            const overlay = document.getElementById('loading-overlay');
+            if (show) {
+                document.getElementById('loading-status-title').textContent = title;
+                document.getElementById('loading-status-desc').textContent = desc;
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+                document.getElementById('loading-preview-wrapper').classList.add('hidden');
+            }
+        }
+
+        function updateLoadingStatus(title, desc) {
+            document.getElementById('loading-status-title').textContent = title;
+            document.getElementById('loading-status-desc').textContent = desc;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+    </script>
+</body>
+</html>
